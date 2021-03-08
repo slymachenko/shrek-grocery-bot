@@ -1,0 +1,17 @@
+{
+  "name": "shrek-grocery-bot",
+  "version": "1.0.0",
+  "description": "grocery list bot with calculator to make your life a little easier",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "start-dev": "nodemon index.js"
+  },
+  "author": "Arseniy",
+  "license": "ISC",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "mongoose": "^5.11.19",
+    "node-telegram-bot-api": "^0.51.0"
+  }
+}
