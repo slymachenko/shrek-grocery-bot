@@ -32,6 +32,14 @@ const list = [
   "Milk",
 ];
 
+const createReplyMarkup = () => {
+  const arr = [];
+  list.forEach((el, index) => {
+    arr.push([{ text: el, callback_data: index }]);
+  });
+  return arr;
+};
+
 bot.onText(/^\/start$/, (msg) => {
   const { id } = msg.chat;
   const html = `
@@ -49,18 +57,13 @@ bot.onText(/^\/start$/, (msg) => {
 bot.onText(/^View$/, (msg) => {
   const { id } = msg.chat;
 
-  const arr = [];
-  list.forEach((el, index) => {
-    arr.push([{ text: el, callback_data: index }]);
-  });
-
   const html = `
-  <strong>List</strong>`;
+    <strong>List</strong>`;
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
     reply_markup: JSON.stringify({
-      inline_keyboard: arr,
+      inline_keyboard: createReplyMarkup(),
     }),
   };
 
@@ -72,5 +75,15 @@ bot.onText(/^Edit$/, (msg) => {
 });
 
 bot.on("callback_query", (msg) => {
-  console.log(list[msg.data]);
+  list.splice(msg.data, 1);
+
+  bot.editMessageReplyMarkup(
+    JSON.stringify({
+      inline_keyboard: createReplyMarkup(),
+    }),
+    {
+      message_id: msg.message.message_id,
+      chat_id: msg.message.chat.id,
+    }
+  );
 });
