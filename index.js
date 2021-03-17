@@ -29,9 +29,11 @@ const list = [
   "Salat",
   "Watermelon",
   "Cookies",
-  "Milk",
+  "Milk asdasd asad dkfdkf",
 ];
+let sum = 0;
 
+// Generating a Reply Markup with items from a list
 const createReplyMarkup = () => {
   const arr = [];
   list.forEach((el, index) => {
@@ -44,12 +46,16 @@ bot.onText(/^\/start$/, (msg) => {
   const { id } = msg.chat;
   const html = `
   <strong>Oh, hello there!</strong>
-  <i>My name is Shrek(you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>`;
+  <i>My name is Shrek(you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
+  
+  <i>Each message will be added to the list
+  To calculate type number like this '256.04'
+  To clear calculation and list click 'Clear'</i>`;
   bot.sendMessage(id, html, {
     parse_mode: "HTML",
     disable_notification: true,
     reply_markup: {
-      keyboard: [["Edit", "View"]],
+      keyboard: [["Clear", "View"]],
     },
   });
 });
@@ -57,8 +63,6 @@ bot.onText(/^\/start$/, (msg) => {
 bot.onText(/^View$/, (msg) => {
   const { id } = msg.chat;
 
-  const html = `
-    <strong>List</strong>`;
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
@@ -66,15 +70,42 @@ bot.onText(/^View$/, (msg) => {
       inline_keyboard: createReplyMarkup(),
     }),
   };
+  let html;
+
+  if (list.length) {
+    html = `
+    <strong>List</strong>`;
+  } else {
+    html = `
+    <strong>Your list is empty</strong>
+    <i>Total expenses: ${sum}$</i>`;
+  }
 
   bot.sendMessage(id, html, options);
 });
 
-bot.onText(/^Edit$/, (msg) => {
+bot.onText(/^Clear$/, (msg) => {
   const { id } = msg.chat;
+
+  sum = 0;
+  list.length = 0;
+
+  const html = `
+  <strong>List cleared</strong>`;
+  const options = {
+    parse_mode: "HTML",
+    disable_notification: true,
+    reply_markup: {
+      keyboard: [["Clear", "View"]],
+    },
+  };
+  bot.sendMessage(id, html, options);
 });
 
 bot.on("callback_query", (msg) => {
+  const { id } = msg.message.chat;
+
+  // Remove the pressed button from the list
   list.splice(msg.data, 1);
 
   bot.editMessageReplyMarkup(
@@ -86,4 +117,29 @@ bot.on("callback_query", (msg) => {
       chat_id: msg.message.chat.id,
     }
   );
+
+  // If list is empty
+  if (!list.length) {
+    const html = `
+  <strong>Your list is over</strong>
+  <i>Total expenses: 000.00$</i>`;
+    const options = {
+      parse_mode: "HTML",
+      disable_notification: true,
+      reply_markup: {
+        keyboard: [["Clear", "View"]],
+      },
+    };
+    bot.sendMessage(id, html, options);
+  }
+});
+
+bot.onText(/^[\d.]+$/, (msg) => {
+  // Add message text to sum variable
+  const { id } = msg.chat;
+  sum += parseFloat(msg.text);
+});
+
+bot.on("message", (msg) => {
+  // Add message text to list
 });
