@@ -17,20 +17,7 @@ const bot = new TelegramBot(TOKEN, {
 
 console.log("Bot have been started...");
 
-const list = [
-  "Apples",
-  "Bananas",
-  "Lemonade",
-  "Popcorn",
-  "Chips",
-  "Fish",
-  "Eggs",
-  "Potato",
-  "Salat",
-  "Watermelon",
-  "Cookies",
-  "Milk asdasd asad dkfdkf",
-];
+const list = [];
 let sum = 0;
 
 // Generating a Reply Markup with items from a list
@@ -48,9 +35,25 @@ bot.onText(/^\/start$/, (msg) => {
   <strong>Oh, hello there!</strong>
   <i>My name is Shrek(you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
   
-  <i>Each message will be added to the list
-  To calculate type number like this '256.04'
-  To clear calculation and list click 'Clear'</i>`;
+  <i>/help for more information</i>`;
+
+  bot.sendMessage(id, html, {
+    parse_mode: "HTML",
+    disable_notification: true,
+    reply_markup: {
+      keyboard: [["Clear", "View"]],
+    },
+  });
+});
+
+bot.onText(/^\/help$/, (msg) => {
+  const { id } = msg.chat;
+  const html = `Each text message will be added to the list (except commands and numbers)
+  To view the list, click 'View'
+  To remove items from the list, click on them
+  To calculate the price before deleting the item, write the price like this "256.04"
+  To clear the calculation, click 'Clear'`;
+
   bot.sendMessage(id, html, {
     parse_mode: "HTML",
     disable_notification: true,
@@ -62,7 +65,6 @@ bot.onText(/^\/start$/, (msg) => {
 
 bot.onText(/^View$/, (msg) => {
   const { id } = msg.chat;
-
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
@@ -74,11 +76,12 @@ bot.onText(/^View$/, (msg) => {
 
   if (list.length) {
     html = `
-    <strong>List</strong>`;
+    <strong>List</strong>
+    <i>Total expenses: ${sum.toFixed(2)}$</i>`;
   } else {
     html = `
     <strong>Your list is empty</strong>
-    <i>Total expenses: ${sum}$</i>`;
+    <i>Total expenses: ${sum.toFixed(2)}$</i>`;
   }
 
   bot.sendMessage(id, html, options);
@@ -88,10 +91,9 @@ bot.onText(/^Clear$/, (msg) => {
   const { id } = msg.chat;
 
   sum = 0;
-  list.length = 0;
 
   const html = `
-  <strong>List cleared</strong>`;
+  <strong>Calculations cleared</strong>`;
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
@@ -122,7 +124,7 @@ bot.on("callback_query", (msg) => {
   if (!list.length) {
     const html = `
   <strong>Your list is over</strong>
-  <i>Total expenses: 000.00$</i>`;
+  <i>Total expenses: ${sum.toFixed(2)}$</i>`;
     const options = {
       parse_mode: "HTML",
       disable_notification: true,
@@ -130,16 +132,33 @@ bot.on("callback_query", (msg) => {
         keyboard: [["Clear", "View"]],
       },
     };
+
     bot.sendMessage(id, html, options);
   }
 });
 
 bot.onText(/^[\d.]+$/, (msg) => {
-  // Add message text to sum variable
-  const { id } = msg.chat;
+  // Add message number to sum variable
   sum += parseFloat(msg.text);
 });
 
 bot.on("message", (msg) => {
   // Add message text to list
+  const { id } = msg.chat;
+
+  if (
+    isNaN(msg.text) &&
+    msg.text !== "Clear" &&
+    msg.text !== "View" &&
+    msg.text !== "/start" &&
+    msg.text !== "/help"
+  ) {
+    list.push(msg.text);
+    const html = `☑`;
+    const options = {
+      parse_mode: "HTML",
+      disable_notification: true,
+    };
+    bot.sendMessage(id, html, options);
+  }
 });
