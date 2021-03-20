@@ -1,7 +1,21 @@
 const TelegramBot = require("node-telegram-bot-api");
+const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const listController = require("./controllers/listController");
 
 dotenv.config({ path: "./config.env" });
+
+mongoose
+  .connect(process.env.MONGO_URL, {
+    useUnifiedTopology: true,
+    useNewUrlParser: true,
+  })
+  .then(() => {
+    console.log("DB connection successful!");
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
 const TOKEN = process.env.TOKEN;
 
@@ -15,19 +29,15 @@ const bot = new TelegramBot(TOKEN, {
   },
 });
 
-console.log("Bot have been started...");
+console.log("Bot has been started...");
 
-const list = [];
+let list = [];
 let sum = 0;
 
-// Generating a Reply Markup with items from a list
-const createReplyMarkup = () => {
-  const arr = [];
-  list.forEach((el, index) => {
-    arr.push([{ text: el, callback_data: index }]);
-  });
-  return arr;
-};
+(async () => {
+  list = (await listController.getData()).list;
+  sum = (await listController.getData()).calculations;
+})();
 
 bot.onText(/^\/start$/, (msg) => {
   const { id } = msg.chat;
@@ -65,11 +75,12 @@ bot.onText(/^\/help$/, (msg) => {
 
 bot.onText(/^View$/, (msg) => {
   const { id } = msg.chat;
+
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
     reply_markup: JSON.stringify({
-      inline_keyboard: createReplyMarkup(),
+      inline_keyboard: listController.createReplyMarkup(list),
     }),
   };
   let html;
@@ -101,6 +112,9 @@ bot.onText(/^Clear$/, (msg) => {
       keyboard: [["Clear", "View"]],
     },
   };
+
+  listController.clearData();
+
   bot.sendMessage(id, html, options);
 });
 
@@ -109,10 +123,11 @@ bot.on("callback_query", (msg) => {
 
   // Remove the pressed button from the list
   list.splice(msg.data, 1);
+  listController.addData({ ld: list });
 
   bot.editMessageReplyMarkup(
     JSON.stringify({
-      inline_keyboard: createReplyMarkup(),
+      inline_keyboard: listController.createReplyMarkup(list),
     }),
     {
       message_id: msg.message.message_id,
@@ -140,6 +155,7 @@ bot.on("callback_query", (msg) => {
 bot.onText(/^[\d.]+$/, (msg) => {
   // Add message number to sum variable
   sum += parseFloat(msg.text);
+  listController.addData({ calc: sum });
 });
 
 bot.on("message", (msg) => {
@@ -154,6 +170,8 @@ bot.on("message", (msg) => {
     msg.text !== "/help"
   ) {
     list.push(msg.text);
+    listController.addData({ ld: list });
+
     const html = `☑`;
     const options = {
       parse_mode: "HTML",
