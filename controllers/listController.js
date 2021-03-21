@@ -9,34 +9,47 @@ exports.createReplyMarkup = (list) => {
   return arr;
 };
 
-exports.addData = async ({ calc, ld }) => {
-  const data = await listModel.findOne({
-    _id: "605662427659470424ab0c4f",
-  });
+exports.addData = async ({ calc, ld, from }) => {
+  try {
+    const data = await listModel.findOne({
+      fromID: from,
+    });
 
-  data.calculations = calc || data.calculations;
-  data.list = ld || data.list;
+    data.calculations = calc || data.calculations;
+    data.list = ld || data.list;
 
-  data.save();
+    data.save();
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-exports.clearData = async () => {
-  const data = await listModel.findOne({
-    _id: "605662427659470424ab0c4f",
-  });
+exports.clearData = async (from) => {
+  try {
+    const data = await listModel.findOne({
+      fromID: from,
+    });
 
-  data.calculations = 0;
-  data.list = [];
+    data.calculations = 0;
+    data.list = [];
 
-  data.save();
+    data.save();
+  } catch (err) {
+    console.error(err);
+  }
 };
 
-exports.getData = async () => {
-  const data = await listModel.findOne({
-    _id: "605662427659470424ab0c4f",
-  });
-  const list = data.list;
-  const calculations = data.calculations;
+exports.getData = async (from) => {
+  try {
+    const data = await listModel.findOne({
+      fromID: from,
+    });
 
-  return { list, calculations };
+    const list = data.list;
+    const calculations = data.calculations;
+
+    return { list, calculations };
+  } catch (err) {
+    console.error(err);
+  }
 };

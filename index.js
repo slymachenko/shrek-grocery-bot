@@ -31,13 +31,9 @@ const bot = new TelegramBot(TOKEN, {
 
 console.log("Bot has been started...");
 
-let list = [];
-let sum = 0;
-
-(async () => {
-  list = (await listController.getData()).list;
-  sum = (await listController.getData()).calculations;
-})();
+let list;
+let sum;
+let txt;
 
 bot.onText(/^\/start$/, (msg) => {
   const { id } = msg.chat;
@@ -113,7 +109,7 @@ bot.onText(/^Clear$/, (msg) => {
     },
   };
 
-  listController.clearData();
+  listController.clearData(msg.from.id);
 
   bot.sendMessage(id, html, options);
 });
@@ -123,7 +119,7 @@ bot.on("callback_query", (msg) => {
 
   // Remove the pressed button from the list
   list.splice(msg.data, 1);
-  listController.addData({ ld: list });
+  listController.addData({ ld: list, from: msg.from.id });
 
   bot.editMessageReplyMarkup(
     JSON.stringify({
@@ -155,28 +151,34 @@ bot.on("callback_query", (msg) => {
 bot.onText(/^[\d.]+$/, (msg) => {
   // Add message number to sum variable
   sum += parseFloat(msg.text);
-  listController.addData({ calc: sum });
+  listController.addData({ calc: sum, from: msg.from.id });
 });
 
-bot.on("message", (msg) => {
-  // Add message text to list
-  const { id } = msg.chat;
+bot.on("message", async (msg) => {
+  try {
+    // Add message text to list
+    const { id } = msg.chat;
 
-  if (
-    isNaN(msg.text) &&
-    msg.text !== "Clear" &&
-    msg.text !== "View" &&
-    msg.text !== "/start" &&
-    msg.text !== "/help"
-  ) {
-    list.push(msg.text);
-    listController.addData({ ld: list });
+    if (list === undefined) {
+      list = (await listController.getData(msg.from.id)).list;
+      sum = (await listController.getData(msg.from.id)).calculations;
+    }
 
-    const html = `☑`;
-    const options = {
-      parse_mode: "HTML",
-      disable_notification: true,
-    };
-    bot.sendMessage(id, html, options);
+    if (
+      isNaN(msg.text) &&
+      !["Clear", "View", "/start", "/help"].includes(msg.text)
+    ) {
+      list.push(msg.text);
+      listController.addData({ ld: list, from: msg.from.id });
+
+      const html = `☑`;
+      const options = {
+        parse_mode: "HTML",
+        disable_notification: true,
+      };
+      bot.sendMessage(id, html, options);
+    }
+  } catch (err) {
+    console.error(err);
   }
 });
