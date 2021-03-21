@@ -33,7 +33,6 @@ console.log("Bot has been started...");
 
 let list;
 let sum;
-let txt;
 
 bot.onText(/^\/start$/, (msg) => {
   const { id } = msg.chat;
@@ -162,6 +161,8 @@ bot.on("message", async (msg) => {
     if (list === undefined) {
       list = (await listController.getData(msg.from.id)).list;
       sum = (await listController.getData(msg.from.id)).calculations;
+
+      // after receiving the data, give a response
     }
 
     if (
