@@ -82,12 +82,10 @@ bot.onText(/^View$/, (msg) => {
 
   if (list.length) {
     html = `
-    <strong>List</strong>
-    <i>Total expenses: ${sum.toFixed(2)}$</i>`;
+    <strong>List</strong>`;
   } else {
     html = `
-    <strong>Your list is empty</strong>
-    <i>Total expenses: ${sum.toFixed(2)}$</i>`;
+    <strong>Your list is empty</strong>`;
   }
 
   bot.sendMessage(id, html, options);
@@ -161,8 +159,6 @@ bot.on("message", async (msg) => {
     if (list === undefined) {
       list = (await listController.getData(msg.from.id)).list;
       sum = (await listController.getData(msg.from.id)).calculations;
-
-      // after receiving the data, give a response
     }
 
     if (
