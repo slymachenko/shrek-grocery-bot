@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const listSchema = new mongoose.Schema({
-  calculations: Number,
+  expenses: Number,
   list: [String],
   fromID: Number,
 });

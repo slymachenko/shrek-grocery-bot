@@ -31,55 +31,56 @@ const bot = new TelegramBot(TOKEN, {
 
 console.log("Bot has been started...");
 
-let list;
-let sum;
+let list; // array of user elements
+let expenses; // sum of all user expenses
 
 bot.onText(/^\/start$/, (msg) => {
+  // Send greeting message with reply markup for commands (View the list and Clear expenses)
   const { id } = msg.chat;
+
   const html = `
   <strong>Oh, hello there!</strong>
   <i>My name is Shrek(you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
   
   <i>/help for more information</i>`;
 
-  bot.sendMessage(id, html, {
+  const options = {
     parse_mode: "HTML",
     disable_notification: true,
     reply_markup: {
       keyboard: [["Clear", "View"]],
     },
-  });
+  };
+
+  bot.sendMessage(id, html, options);
 });
 
 bot.onText(/^\/help$/, (msg) => {
+  // Send message with all help information
   const { id } = msg.chat;
+
   const html = `Each text message will be added to the list (except commands and numbers)
   To view the list, click 'View'
   To remove items from the list, click on them
   To calculate the price before deleting the item, write the price like this "256.04"
   To clear the calculation, click 'Clear'`;
 
-  bot.sendMessage(id, html, {
+  const options = {
     parse_mode: "HTML",
     disable_notification: true,
     reply_markup: {
       keyboard: [["Clear", "View"]],
     },
-  });
+  };
+
+  bot.sendMessage(id, html, options);
 });
 
 bot.onText(/^View$/, (msg) => {
+  // Send a message with the user's list or inform him if it's empty
   const { id } = msg.chat;
 
-  const options = {
-    parse_mode: "HTML",
-    disable_notification: true,
-    reply_markup: JSON.stringify({
-      inline_keyboard: listController.createReplyMarkup(list),
-    }),
-  };
   let html;
-
   if (list.length) {
     html = `
     <strong>List</strong>`;
@@ -88,16 +89,27 @@ bot.onText(/^View$/, (msg) => {
     <strong>Your list is empty</strong>`;
   }
 
+  const options = {
+    parse_mode: "HTML",
+    disable_notification: true,
+    reply_markup: JSON.stringify({
+      inline_keyboard: listController.createReplyMarkup(list),
+    }),
+  };
+
   bot.sendMessage(id, html, options);
 });
 
 bot.onText(/^Clear$/, (msg) => {
+  // Clear expenses and send message to inform the user
   const { id } = msg.chat;
 
-  sum = 0;
+  expenses = 0;
+  listController.clearData(msg.from.id);
 
   const html = `
   <strong>Calculations cleared</strong>`;
+
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
@@ -106,15 +118,13 @@ bot.onText(/^Clear$/, (msg) => {
     },
   };
 
-  listController.clearData(msg.from.id);
-
   bot.sendMessage(id, html, options);
 });
 
 bot.on("callback_query", (msg) => {
   const { id } = msg.message.chat;
 
-  // Remove the pressed button from the list
+  // Remove selected elements from the list
   list.splice(msg.data, 1);
   listController.addData({ ld: list, from: msg.from.id });
 
@@ -128,11 +138,12 @@ bot.on("callback_query", (msg) => {
     }
   );
 
-  // If list is empty
+  // If list is over => send a message with expenses
   if (!list.length) {
     const html = `
   <strong>Your list is over</strong>
-  <i>Total expenses: ${sum.toFixed(2)}$</i>`;
+  <i>Total expenses: ${expenses.toFixed(2)}$</i>`;
+
     const options = {
       parse_mode: "HTML",
       disable_notification: true,
@@ -146,21 +157,20 @@ bot.on("callback_query", (msg) => {
 });
 
 bot.onText(/^[\d.]+$/, (msg) => {
-  // Add message number to sum variable
-  sum += parseFloat(msg.text);
-  listController.addData({ calc: sum, from: msg.from.id });
+  // If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
+  expenses += parseFloat(msg.text);
+  listController.addData({ calc: expenses, from: msg.from.id });
 });
 
 bot.on("message", async (msg) => {
   try {
-    // Add message text to list
     const { id } = msg.chat;
 
-    if (list === undefined) {
-      list = (await listController.getData(msg.from.id)).list;
-      sum = (await listController.getData(msg.from.id)).calculations;
-    }
+    // If list is empty => Get data from the DB
+    if (list === undefined)
+      ({ list, expenses } = await listController.getData(msg.from.id));
 
+    // If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
     if (
       isNaN(msg.text) &&
       !["Clear", "View", "/start", "/help"].includes(msg.text)
@@ -173,6 +183,7 @@ bot.on("message", async (msg) => {
         parse_mode: "HTML",
         disable_notification: true,
       };
+
       bot.sendMessage(id, html, options);
     }
   } catch (err) {

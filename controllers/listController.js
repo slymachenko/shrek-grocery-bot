@@ -1,21 +1,24 @@
 const listModel = require("./../models/listModel");
 
-// Generating a Reply Markup with items from a list
+// Generate a Reply Markup buttons with items from a list
 exports.createReplyMarkup = (list) => {
   const arr = [];
+
   list.forEach((el, index) => {
     arr.push([{ text: el, callback_data: index }]);
   });
+
   return arr;
 };
 
+// Find user DB document and add data to it
 exports.addData = async ({ calc, ld, from }) => {
   try {
     const data = await listModel.findOne({
       fromID: from,
     });
 
-    data.calculations = calc || data.calculations;
+    data.expenses = calc || data.expenses;
     data.list = ld || data.list;
 
     data.save();
@@ -24,14 +27,14 @@ exports.addData = async ({ calc, ld, from }) => {
   }
 };
 
+// Find user DB document and reset its expenses
 exports.clearData = async (from) => {
   try {
     const data = await listModel.findOne({
       fromID: from,
     });
 
-    data.calculations = 0;
-    data.list = [];
+    data.expenses = 0;
 
     data.save();
   } catch (err) {
@@ -39,16 +42,22 @@ exports.clearData = async (from) => {
   }
 };
 
+// Find user DB document and return its data
 exports.getData = async (from) => {
   try {
-    const data = await listModel.findOne({
+    let data = await listModel.findOne({
       fromID: from,
     });
+    console.log(data);
+    if (!data) {
+      data = await listModel.create({
+        expenses: 0,
+        list: [],
+        fromID: from,
+      });
+    }
 
-    const list = data.list;
-    const calculations = data.calculations;
-
-    return { list, calculations };
+    return { list: data.list, expenses: data.expenses };
   } catch (err) {
     console.error(err);
   }
