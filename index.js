@@ -34,6 +34,12 @@ console.log("Bot has been started...");
 let list; // array of user elements
 let expenses; // sum of all user expenses
 
+// If `list` variable is empty => Get data from the DB and put it in `list` and `expenses` variables
+const recieveData = async (userID) => {
+  if (list === undefined)
+    ({ list, expenses } = await listController.getData(userID));
+};
+
 bot.onText(/^\/start$/, (msg) => {
   // Send greeting message with reply markup for commands (View the list and Clear expenses)
   const { id } = msg.chat;
@@ -76,9 +82,11 @@ bot.onText(/^\/help$/, (msg) => {
   bot.sendMessage(id, html, options);
 });
 
-bot.onText(/^View$/, (msg) => {
+bot.onText(/^View$/, async (msg) => {
   // Send a message with the user's list or inform him if it's empty
   const { id } = msg.chat;
+
+  await recieveData(msg.from.id);
 
   let html;
   if (list.length) {
@@ -100,9 +108,11 @@ bot.onText(/^View$/, (msg) => {
   bot.sendMessage(id, html, options);
 });
 
-bot.onText(/^Clear$/, (msg) => {
+bot.onText(/^Clear$/, async (msg) => {
   // Clear expenses and send message to inform the user
   const { id } = msg.chat;
+
+  await recieveData(msg.from.id);
 
   expenses = 0;
   listController.clearData(msg.from.id);
@@ -121,8 +131,10 @@ bot.onText(/^Clear$/, (msg) => {
   bot.sendMessage(id, html, options);
 });
 
-bot.on("callback_query", (msg) => {
+bot.on("callback_query", async (msg) => {
   const { id } = msg.message.chat;
+
+  await recieveData(msg.from.id);
 
   // Remove selected elements from the list
   list.splice(msg.data, 1);
@@ -156,8 +168,10 @@ bot.on("callback_query", (msg) => {
   }
 });
 
-bot.onText(/^[\d.]+$/, (msg) => {
+bot.onText(/^[\d.]+$/, async (msg) => {
   // If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
+  await recieveData(msg.from.id);
+
   expenses += parseFloat(msg.text);
   listController.addData({ calc: expenses, from: msg.from.id });
 });
@@ -166,15 +180,13 @@ bot.on("message", async (msg) => {
   try {
     const { id } = msg.chat;
 
-    // If list is empty => Get data from the DB
-    if (list === undefined)
-      ({ list, expenses } = await listController.getData(msg.from.id));
-
     // If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
     if (
       isNaN(msg.text) &&
       !["Clear", "View", "/start", "/help"].includes(msg.text)
     ) {
+      await recieveData(msg.from.id);
+
       list.push(msg.text);
       listController.addData({ ld: list, from: msg.from.id });
 

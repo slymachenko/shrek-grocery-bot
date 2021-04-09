@@ -49,16 +49,21 @@ exports.getData = async (from) => {
       fromID: from,
     });
     console.log(data);
+
     if (!data) {
-      data = await listModel.create({
-        expenses: 0,
-        list: [],
-        fromID: from,
-      });
+      data = await createDBDocument(from);
     }
 
     return { list: data.list, expenses: data.expenses };
   } catch (err) {
     console.error(err);
   }
+};
+
+const createDBDocument = async (userID) => {
+  return listModel.create({
+    expenses: 0,
+    list: [],
+    fromID: userID,
+  });
 };
