@@ -14,9 +14,7 @@ exports.createReplyMarkup = (list) => {
 // Find user DB document and add data to it
 exports.addData = async ({ calc, ld, from }) => {
   try {
-    const data = await listModel.findOne({
-      fromID: from,
-    });
+    const data = await findDBDocument(from);
 
     data.expenses = calc || data.expenses;
     data.list = ld || data.list;
@@ -30,9 +28,7 @@ exports.addData = async ({ calc, ld, from }) => {
 // Find user DB document and reset its expenses
 exports.clearData = async (from) => {
   try {
-    const data = await listModel.findOne({
-      fromID: from,
-    });
+    const data = await findDBDocument(from);
 
     data.expenses = 0;
 
@@ -45,14 +41,7 @@ exports.clearData = async (from) => {
 // Find user DB document and return its data
 exports.getData = async (from) => {
   try {
-    let data = await listModel.findOne({
-      fromID: from,
-    });
-    console.log(data);
-
-    if (!data) {
-      data = await createDBDocument(from);
-    }
+    const data = await findDBDocument(from);
 
     return { list: data.list, expenses: data.expenses };
   } catch (err) {
@@ -66,4 +55,16 @@ const createDBDocument = async (userID) => {
     list: [],
     fromID: userID,
   });
+};
+
+const findDBDocument = async (userID) => {
+  let data = await listModel.findOne({
+    fromID: userID,
+  });
+
+  if (!data) {
+    data = await createDBDocument(userID);
+  }
+
+  return data;
 };

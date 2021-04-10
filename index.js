@@ -36,8 +36,7 @@ let expenses; // sum of all user expenses
 
 // If `list` variable is empty => Get data from the DB and put it in `list` and `expenses` variables
 const recieveData = async (userID) => {
-  if (list === undefined)
-    ({ list, expenses } = await listController.getData(userID));
+  ({ list, expenses } = await listController.getData(userID));
 };
 
 bot.onText(/^\/start$/, (msg) => {
@@ -46,7 +45,7 @@ bot.onText(/^\/start$/, (msg) => {
 
   const html = `
   <strong>Oh, hello there!</strong>
-  <i>My name is Shrek(you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
+  <i>My name is Shrek (you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
   
   <i>/help for more information</i>`;
 
