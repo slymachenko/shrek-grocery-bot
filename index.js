@@ -52,9 +52,6 @@ bot.onText(/^\/start$/, (msg) => {
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
-    reply_markup: {
-      keyboard: [["Clear", "View"]],
-    },
   };
 
   bot.sendMessage(id, html, options);
@@ -65,23 +62,21 @@ bot.onText(/^\/help$/, (msg) => {
   const { id } = msg.chat;
 
   const html = `Each text message will be added to the list (except commands and numbers)
-  To view the list, click 'View'
+  To view the list => /view
   To remove items from the list, click on them
-  To calculate the price before deleting the item, write the price like this "256.04"
-  To clear the calculation, click 'Clear'`;
+  To calculate your expenses before deleting the item, write the price like this "256.04"
+  To check your current expenses => /expenses
+  To clear the calculation => /clear`;
 
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
-    reply_markup: {
-      keyboard: [["Clear", "View"]],
-    },
   };
 
   bot.sendMessage(id, html, options);
 });
 
-bot.onText(/^View$/, async (msg) => {
+bot.onText(/^\/view$/, async (msg) => {
   // Send a message with the user's list or inform him if it's empty
   const { id } = msg.chat;
 
@@ -107,7 +102,7 @@ bot.onText(/^View$/, async (msg) => {
   bot.sendMessage(id, html, options);
 });
 
-bot.onText(/^Clear$/, async (msg) => {
+bot.onText(/^\/clear$/, async (msg) => {
   // Clear expenses and send message to inform the user
   const { id } = msg.chat;
 
@@ -122,9 +117,20 @@ bot.onText(/^Clear$/, async (msg) => {
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
-    reply_markup: {
-      keyboard: [["Clear", "View"]],
-    },
+  };
+
+  bot.sendMessage(id, html, options);
+});
+
+bot.onText(/^\/expenses$/, async (msg) => {
+  // Show current expenses
+  const { id } = msg.chat;
+
+  const html = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
+
+  const options = {
+    parse_mode: "HTML",
+    disable_notification: true,
   };
 
   bot.sendMessage(id, html, options);
@@ -158,9 +164,6 @@ bot.on("callback_query", async (msg) => {
     const options = {
       parse_mode: "HTML",
       disable_notification: true,
-      reply_markup: {
-        keyboard: [["Clear", "View"]],
-      },
     };
 
     bot.sendMessage(id, html, options);
@@ -182,7 +185,7 @@ bot.on("message", async (msg) => {
     // If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
     if (
       isNaN(msg.text) &&
-      !["Clear", "View", "/start", "/help"].includes(msg.text)
+      !["/clear", "/view", "/start", "/help", "/expenses"].includes(msg.text)
     ) {
       await recieveData(msg.from.id);
 
