@@ -9,11 +9,9 @@ Telegram Bot to help you deal with your grocery trip!
 - Find **@shrek_grocery_bot** in telegram search
 - Click **Start**
 
-# Examples
+# Example
 
-![Example-1](https://raw.githubusercontent.com/SENYa-408/shrek-grocery-bot/master/readme-imgs/screenshot-1.png)
-![Example-2](https://raw.githubusercontent.com/SENYa-408/shrek-grocery-bot/master/readme-imgs/screenshot-2.png)
-![Example-3](https://raw.githubusercontent.com/SENYa-408/shrek-grocery-bot/master/readme-imgs/screenshot-3.png)
+![Example](https://raw.githubusercontent.com/SENYa-408/shrek-grocery-bot/master/readme-imgs/example.gif)
 
 # Install
 
