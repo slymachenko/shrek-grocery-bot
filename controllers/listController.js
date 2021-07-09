@@ -16,7 +16,7 @@ exports.addData = async ({ calc, ld, from }) => {
   try {
     const data = await findDBDocument(from);
 
-    data.expenses = calc || data.expenses;
+    if (calc >= 0) data.expenses = calc;
     data.list = ld || data.list;
 
     data.save();

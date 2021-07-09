@@ -65,6 +65,7 @@ bot.onText(/^\/help$/, (msg) => {
   To view the list => /view
   To remove items from the list, click on them
   To calculate your expenses before deleting the item, write the price like this "256.04"
+  To subtract your expenses type '-' before number (for example: "-11.6")
   To check your current expenses => /expenses
   To clear the calculation => /clear`;
 
@@ -126,6 +127,8 @@ bot.onText(/^\/expenses$/, async (msg) => {
   // Show current expenses
   const { id } = msg.chat;
 
+  await recieveData(msg.from.id);
+
   const html = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
 
   const options = {
@@ -170,11 +173,13 @@ bot.on("callback_query", async (msg) => {
   }
 });
 
-bot.onText(/^[\d.]+$/, async (msg) => {
+bot.onText(/^[-\d.]+$/, async (msg) => {
   // If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
   await recieveData(msg.from.id);
 
   expenses += parseFloat(msg.text);
+  if (expenses < 0) expenses = 0;
+
   listController.addData({ calc: expenses, from: msg.from.id });
 });
 
