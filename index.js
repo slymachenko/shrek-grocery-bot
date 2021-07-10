@@ -2,6 +2,7 @@ const TelegramBot = require("node-telegram-bot-api");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
 const listController = require("./controllers/listController");
+const templatesController = require("./controllers/templatesController");
 
 dotenv.config({ path: "./config.env" });
 
@@ -133,7 +134,7 @@ bot.onText(/^\/templates/, async (msg) => {
 
   // set template if there's product and price
   if (product && price) {
-    listController.updateTemplates(msg.from.id, product, price);
+    templatesController.updateTemplates(msg.from.id, product, price);
 
     const html = `templates has been updated`;
 
@@ -142,20 +143,20 @@ bot.onText(/^\/templates/, async (msg) => {
 
   // delete template if there's only product
   if (product) {
-    if (!(await listController.checkTemplate(msg.from.id, product))) {
+    if (!(await templatesController.checkTemplate(msg.from.id, product))) {
       const html = `there's no <strong>${product}</strong> in the templates list`;
 
       return bot.sendMessage(id, html, options);
     }
 
-    listController.updateTemplates(msg.from.id, product);
+    templatesController.updateTemplates(msg.from.id, product);
 
     const html = `<strong>${product}</strong> has been deleted from templates list`;
 
     return bot.sendMessage(id, html, options);
   }
 
-  const html = await listController.createTemplateList(msg.from.id);
+  const html = await templatesController.createTemplateList(msg.from.id);
 
   bot.sendMessage(id, html, options);
 });
@@ -166,8 +167,11 @@ bot.on("callback_query", async (msg) => {
   await recieveData(msg.from.id);
 
   // if there's template for that product => add its price to expenses
-  if (await listController.checkTemplate(msg.from.id, list[msg.data])) {
-    expenses += await listController.checkTemplate(msg.from.id, list[msg.data]);
+  if (await templatesController.checkTemplate(msg.from.id, list[msg.data])) {
+    expenses += await templatesController.checkTemplate(
+      msg.from.id,
+      list[msg.data]
+    );
   }
 
   // remove selected elements from the list
