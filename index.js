@@ -68,7 +68,10 @@ bot.onText(/^\/help$/, (msg) => {
   To calculate your expenses before deleting the item, write the price like this "256.04"
   To subtract your expenses type '-' before number (for example: "-11.6")
   To check your current expenses => /expenses
-  To clear the calculation => /clear`;
+  To clear the calculation => /clear
+  To check your templates => /templates
+  To add your template => /templates *product name* *price*
+  To delete your template => /templates *product name*`;
 
   bot.sendMessage(id, html, options);
 });
