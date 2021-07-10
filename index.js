@@ -49,20 +49,20 @@ bot.onText(/^\/start$/, (msg) => {
   // Send greeting message with reply markup for commands (View the list and Clear expenses)
   const { id } = msg.chat;
 
-  const html = `
+  const response = `
   <strong>Oh, hello there!</strong>
   <i>My name is Shrek (you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
   
   <i>/help for more information</i>`;
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.onText(/^\/help$/, (msg) => {
   // Send message with all help information
   const { id } = msg.chat;
 
-  const html = `Each text message will be added to the list (except commands and numbers)
+  const response = `Each text message will be added to the list (except commands and numbers)
   To view the list => /view
   To remove items from the list, click on them
   To calculate your expenses before deleting the item, write the price like this "256.04"
@@ -73,7 +73,7 @@ bot.onText(/^\/help$/, (msg) => {
   To add your template => /templates *product name* *price*
   To delete your template => /templates *product name*`;
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.onText(/^\/view$/, async (msg) => {
@@ -82,12 +82,12 @@ bot.onText(/^\/view$/, async (msg) => {
 
   await recieveData(msg.from.id);
 
-  let html;
+  let response;
   if (list.length) {
-    html = `
+    response = `
     <strong>List</strong>`;
   } else {
-    html = `
+    response = `
     <strong>Your list is empty</strong>`;
   }
 
@@ -99,7 +99,7 @@ bot.onText(/^\/view$/, async (msg) => {
     }),
   };
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.onText(/^\/clear$/, async (msg) => {
@@ -111,10 +111,10 @@ bot.onText(/^\/clear$/, async (msg) => {
   expenses = 0;
   listController.clearData(msg.from.id);
 
-  const html = `
+  const response = `
   <strong>Calculations cleared</strong>`;
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.onText(/^\/expenses$/, async (msg) => {
@@ -123,9 +123,9 @@ bot.onText(/^\/expenses$/, async (msg) => {
 
   await recieveData(msg.from.id);
 
-  const html = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
+  const response = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.onText(/^\/templates/, async (msg) => {
@@ -139,29 +139,29 @@ bot.onText(/^\/templates/, async (msg) => {
   if (product && price) {
     templatesController.updateTemplates(msg.from.id, product, price);
 
-    const html = `templates has been updated`;
+    const response = `templates has been updated`;
 
-    return bot.sendMessage(id, html, options);
+    return bot.sendMessage(id, response, options);
   }
 
   // delete template if there's only product
   if (product) {
     if (!(await templatesController.checkTemplate(msg.from.id, product))) {
-      const html = `there's no <strong>${product}</strong> in the templates list`;
+      const response = `there's no <strong>${product}</strong> in the templates list`;
 
-      return bot.sendMessage(id, html, options);
+      return bot.sendMessage(id, response, options);
     }
 
     templatesController.updateTemplates(msg.from.id, product);
 
-    const html = `<strong>${product}</strong> has been deleted from templates list`;
+    const response = `<strong>${product}</strong> has been deleted from templates list`;
 
-    return bot.sendMessage(id, html, options);
+    return bot.sendMessage(id, response, options);
   }
 
-  const html = await templatesController.createTemplateList(msg.from.id);
+  const response = await templatesController.createTemplateList(msg.from.id);
 
-  bot.sendMessage(id, html, options);
+  bot.sendMessage(id, response, options);
 });
 
 bot.on("callback_query", async (msg) => {
@@ -194,11 +194,11 @@ bot.on("callback_query", async (msg) => {
 
   // If list is over => send a message with expenses
   if (!list.length) {
-    const html = `
+    const response = `
   <strong>Your list is over</strong>
   <i>Total expenses: ${expenses.toFixed(2)}$</i>`;
 
-    bot.sendMessage(id, html, options);
+    bot.sendMessage(id, response, options);
   }
 });
 
@@ -230,9 +230,9 @@ bot.on("message", async (msg) => {
     list.push(msg.text);
     listController.updateData({ ld: list, from: msg.from.id });
 
-    const html = `☑`;
+    const response = `☑`;
 
-    bot.sendMessage(id, html, options);
+    bot.sendMessage(id, response, options);
   } catch (err) {
     console.error(err);
   }
