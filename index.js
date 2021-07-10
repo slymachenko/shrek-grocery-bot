@@ -31,6 +31,11 @@ const bot = new TelegramBot(TOKEN, {
 
 console.log("Bot has been started...");
 
+const options = {
+  parse_mode: "HTML",
+  disable_notification: true,
+};
+
 let list; // array of user elements
 let expenses; // sum of all user expenses
 
@@ -49,11 +54,6 @@ bot.onText(/^\/start$/, (msg) => {
   
   <i>/help for more information</i>`;
 
-  const options = {
-    parse_mode: "HTML",
-    disable_notification: true,
-  };
-
   bot.sendMessage(id, html, options);
 });
 
@@ -68,11 +68,6 @@ bot.onText(/^\/help$/, (msg) => {
   To subtract your expenses type '-' before number (for example: "-11.6")
   To check your current expenses => /expenses
   To clear the calculation => /clear`;
-
-  const options = {
-    parse_mode: "HTML",
-    disable_notification: true,
-  };
 
   bot.sendMessage(id, html, options);
 });
@@ -115,11 +110,6 @@ bot.onText(/^\/clear$/, async (msg) => {
   const html = `
   <strong>Calculations cleared</strong>`;
 
-  const options = {
-    parse_mode: "HTML",
-    disable_notification: true,
-  };
-
   bot.sendMessage(id, html, options);
 });
 
@@ -131,10 +121,41 @@ bot.onText(/^\/expenses$/, async (msg) => {
 
   const html = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
 
-  const options = {
-    parse_mode: "HTML",
-    disable_notification: true,
-  };
+  bot.sendMessage(id, html, options);
+});
+
+bot.onText(/^\/templates/, async (msg) => {
+  const { id } = msg.chat;
+
+  await recieveData(msg.from.id);
+
+  const [, product, price] = msg.text.split(" ");
+
+  // set template if there's product and price
+  if (product && price) {
+    listController.updateTemplates(msg.from.id, product, price);
+
+    const html = `templates has been updated`;
+
+    return bot.sendMessage(id, html, options);
+  }
+
+  // delete template if there's only product
+  if (product) {
+    if (!(await listController.checkTemplate(msg.from.id, product))) {
+      const html = `there's no <strong>${product}</strong> in the templates list`;
+
+      return bot.sendMessage(id, html, options);
+    }
+
+    listController.updateTemplates(msg.from.id, product);
+
+    const html = `<strong>${product}</strong> has been deleted from templates list`;
+
+    return bot.sendMessage(id, html, options);
+  }
+
+  const html = await listController.createTemplateList(msg.from.id);
 
   bot.sendMessage(id, html, options);
 });
@@ -144,9 +165,15 @@ bot.on("callback_query", async (msg) => {
 
   await recieveData(msg.from.id);
 
-  // Remove selected elements from the list
+  // if there's template for that product => add its price to expenses
+  if (await listController.checkTemplate(msg.from.id, list[msg.data])) {
+    expenses += await listController.checkTemplate(msg.from.id, list[msg.data]);
+  }
+
+  // remove selected elements from the list
   list.splice(msg.data, 1);
-  listController.addData({ ld: list, from: msg.from.id });
+
+  listController.updateData({ ld: list, calc: expenses, from: msg.from.id });
 
   bot.editMessageReplyMarkup(
     JSON.stringify({
@@ -164,23 +191,19 @@ bot.on("callback_query", async (msg) => {
   <strong>Your list is over</strong>
   <i>Total expenses: ${expenses.toFixed(2)}$</i>`;
 
-    const options = {
-      parse_mode: "HTML",
-      disable_notification: true,
-    };
-
     bot.sendMessage(id, html, options);
   }
 });
 
 bot.onText(/^[-\d.]+$/, async (msg) => {
   // If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
+  // If user sends a number (-12.345  -16  -28.5  etc.) => Subtract message number from `expenses` variable
   await recieveData(msg.from.id);
 
   expenses += parseFloat(msg.text);
   if (expenses < 0) expenses = 0;
 
-  listController.addData({ calc: expenses, from: msg.from.id });
+  listController.updateData({ calc: expenses, from: msg.from.id });
 });
 
 bot.on("message", async (msg) => {
@@ -189,22 +212,20 @@ bot.on("message", async (msg) => {
 
     // If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
     if (
-      isNaN(msg.text) &&
-      !["/clear", "/view", "/start", "/help", "/expenses"].includes(msg.text)
-    ) {
-      await recieveData(msg.from.id);
+      !isNaN(msg.text) ||
+      ["/clear", "/view", "/start", "/help", "/expenses"].includes(msg.text) ||
+      new RegExp("^/templates").test(msg.text)
+    )
+      return;
 
-      list.push(msg.text);
-      listController.addData({ ld: list, from: msg.from.id });
+    await recieveData(msg.from.id);
 
-      const html = `☑`;
-      const options = {
-        parse_mode: "HTML",
-        disable_notification: true,
-      };
+    list.push(msg.text);
+    listController.updateData({ ld: list, from: msg.from.id });
 
-      bot.sendMessage(id, html, options);
-    }
+    const html = `☑`;
+
+    bot.sendMessage(id, html, options);
   } catch (err) {
     console.error(err);
   }
