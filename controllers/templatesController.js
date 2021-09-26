@@ -1,6 +1,6 @@
 const documentController = require("./documentController");
 
-const getTemplates = async (from) => {
+exports.getTemplates = async (from) => {
   try {
     const data = await documentController.findDBDocument(from);
 
@@ -40,27 +40,6 @@ exports.checkTemplate = async (from, product) => {
     });
 
     return price ? price : false;
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-exports.createTemplateList = async (from) => {
-  try {
-    const templates = await getTemplates(from);
-
-    let list = `Templates:`;
-
-    if (Object.keys(templates).length === 0) {
-      return `You have no templates`;
-    }
-
-    Object.keys(templates).forEach((key) => {
-      list += `
-  ${key}: ${templates[key]}`;
-    });
-
-    return list;
   } catch (err) {
     console.error(err);
   }

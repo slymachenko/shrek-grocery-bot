@@ -1,8 +1,10 @@
 const TelegramBot = require("node-telegram-bot-api");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+
 const listController = require("./controllers/listController");
 const templatesController = require("./controllers/templatesController");
+const getResponse = require("./controllers/messageController");
 
 dotenv.config({ path: "./config.env" });
 
@@ -21,14 +23,12 @@ mongoose
 const TOKEN = process.env.TOKEN;
 
 const bot = new TelegramBot(TOKEN, {
-  polling: {
-    interval: 300,
-    autoStart: true,
-    params: {
-      timeout: 10,
-    },
+  webHook: {
+    port: process.env.PORT,
   },
 });
+
+bot.setWebHook(`${process.env.URL}/bot/${process.env.TOKEN}`);
 
 console.log("Bot has been started...");
 
@@ -45,52 +45,28 @@ const recieveData = async (userID) => {
   ({ list, expenses } = await listController.getData(userID));
 };
 
-bot.onText(/^\/start$/, (msg) => {
-  // Send greeting message with reply markup for commands (View the list and Clear expenses)
+// Send greeting message
+bot.onText(/^\/start$/, (msg, [source]) => {
   const { id } = msg.chat;
-
-  const response = `
-  <strong>Oh, hello there!</strong>
-  <i>My name is Shrek (you may know me from my autobiographical films) and I'll help you deal with your grocery trip!</i>
-  
-  <i>/help for more information</i>`;
+  const response = getResponse(source);
 
   bot.sendMessage(id, response, options);
 });
 
-bot.onText(/^\/help$/, (msg) => {
-  // Send message with all help information
+// Send message with all help information
+bot.onText(/^\/help$/, (msg, [source]) => {
   const { id } = msg.chat;
-
-  const response = `Each text message will be added to the list (except commands and numbers)
-  To view the list => /view
-  To remove items from the list, click on them
-  To calculate your expenses before deleting the item, write the price like this "256.04"
-  To subtract your expenses type '-' before number (for example: "-11.6")
-  To check your current expenses => /expenses
-  To clear the calculation => /clear
-  To check your templates => /templates
-  To add your template => /templates *product name* *price*
-  To delete your template => /templates *product name*`;
+  const response = getResponse(source);
 
   bot.sendMessage(id, response, options);
 });
 
-bot.onText(/^\/view$/, async (msg) => {
-  // Send a message with the user's list or inform him if it's empty
+// Send a message with the user's list or inform them if it's empty
+bot.onText(/^\/view$/, async (msg, [source]) => {
   const { id } = msg.chat;
+  const response = getResponse(source);
 
   await recieveData(msg.from.id);
-
-  let response;
-  if (list.length) {
-    response = `
-    <strong>List</strong>`;
-  } else {
-    response = `
-    <strong>Your list is empty</strong>`;
-  }
-
   const options = {
     parse_mode: "HTML",
     disable_notification: true,
@@ -99,75 +75,80 @@ bot.onText(/^\/view$/, async (msg) => {
     }),
   };
 
-  bot.sendMessage(id, response, options);
+  if (list.length) return bot.sendMessage(id, response.list, options);
+
+  bot.sendMessage(id, response.listEmpty, options);
 });
 
-bot.onText(/^\/clear$/, async (msg) => {
-  // Clear expenses and send message to inform the user
+// Clear expenses and send message to inform the user
+bot.onText(/^\/clear$/, async (msg, [source]) => {
   const { id } = msg.chat;
 
+  await listController.clearData(msg.from.id);
   await recieveData(msg.from.id);
-
-  expenses = 0;
-  listController.clearData(msg.from.id);
-
-  const response = `
-  <strong>Calculations cleared</strong>`;
-
-  bot.sendMessage(id, response, options);
-});
-
-bot.onText(/^\/expenses$/, async (msg) => {
-  // Show current expenses
-  const { id } = msg.chat;
-
-  await recieveData(msg.from.id);
-
-  const response = `<strong>Current expenses: ${expenses.toFixed(2)}$</strong>`;
+  const response = getResponse(source);
 
   bot.sendMessage(id, response, options);
 });
 
-bot.onText(/^\/templates/, async (msg) => {
+// Show current expenses
+bot.onText(/^\/expenses$/, async (msg, [source]) => {
   const { id } = msg.chat;
 
   await recieveData(msg.from.id);
 
+  const response = getResponse(source, { expenses });
+
+  bot.sendMessage(id, response, options);
+});
+
+bot.onText(/^\/settemplate/, async (msg, [source]) => {
+  const { id } = msg.chat;
+  await recieveData(msg.from.id);
   const [, product, price] = msg.text.split(" ");
+  const response = getResponse(source, { product });
 
-  // set template if there's product and price
-  if (product && price) {
-    templatesController.updateTemplates(msg.from.id, product, price);
+  // set template if there's product name and price
+  if (!product || !price) return bot.sendMessage(id, response.textErr, options);
+  templatesController.updateTemplates(msg.from.id, product, price);
 
-    const response = `templates has been updated`;
+  return bot.sendMessage(id, response.success, options);
+});
 
-    return bot.sendMessage(id, response, options);
-  }
+bot.onText(/^\/removetemplate/, async (msg, [source]) => {
+  const { id } = msg.chat;
+  await recieveData(msg.from.id);
+  const [, product] = msg.text.split(" ");
+  const response = getResponse(source, { product });
 
-  // delete template if there's only product
-  if (product) {
-    if (!(await templatesController.checkTemplate(msg.from.id, product))) {
-      const response = `there's no <strong>${product}</strong> in the templates list`;
+  // delete template if there's product name
+  if (!product) return bot.sendMessage(id, response.textErr);
+  const isTemplate = await templatesController.checkTemplate(
+    msg.from.id,
+    product
+  );
+  if (!isTemplate) return bot.sendMessage(id, response.err, options);
 
-      return bot.sendMessage(id, response, options);
-    }
+  templatesController.updateTemplates(msg.from.id, product);
 
-    templatesController.updateTemplates(msg.from.id, product);
+  return bot.sendMessage(id, response.success, options);
+});
 
-    const response = `<strong>${product}</strong> has been deleted from templates list`;
-
-    return bot.sendMessage(id, response, options);
-  }
-
-  const response = await templatesController.createTemplateList(msg.from.id);
+bot.onText(/^\/templates$/, async (msg, [source]) => {
+  const { id } = msg.chat;
+  await recieveData(msg.from.id);
+  const templates = await templatesController.getTemplates(msg.from.id);
+  const response = getResponse(source, { templates });
 
   bot.sendMessage(id, response, options);
 });
 
 bot.on("callback_query", async (msg) => {
   const { id } = msg.message.chat;
+  const callback_query_id = msg.id;
 
   await recieveData(msg.from.id);
+  const response = getResponse("list", { expenses });
 
   // if there's template for that product => add its price to expenses
   if (await templatesController.checkTemplate(msg.from.id, list[msg.data])) {
@@ -181,6 +162,7 @@ bot.on("callback_query", async (msg) => {
   list.splice(msg.data, 1);
 
   listController.updateData({ ld: list, calc: expenses, from: msg.from.id });
+  bot.answerCallbackQuery(callback_query_id);
 
   bot.editMessageReplyMarkup(
     JSON.stringify({
@@ -193,18 +175,12 @@ bot.on("callback_query", async (msg) => {
   );
 
   // If list is over => send a message with expenses
-  if (!list.length) {
-    const response = `
-  <strong>Your list is over</strong>
-  <i>Total expenses: ${expenses.toFixed(2)}$</i>`;
-
-    bot.sendMessage(id, response, options);
-  }
+  if (!list.length) bot.sendMessage(id, response, options);
 });
 
+// If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
+// If user sends a number (-12.345  -16  -28.5  etc.) => Subtract message number from `expenses` variable
 bot.onText(/^[-\d.]+$/, async (msg) => {
-  // If user sends a number (12.345  16  28.5  etc.) => Add message number to `expenses` variable
-  // If user sends a number (-12.345  -16  -28.5  etc.) => Subtract message number from `expenses` variable
   await recieveData(msg.from.id);
 
   expenses += parseFloat(msg.text);
@@ -213,35 +189,22 @@ bot.onText(/^[-\d.]+$/, async (msg) => {
   listController.updateData({ calc: expenses, from: msg.from.id });
 });
 
+// If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
 bot.on("message", async (msg) => {
-  try {
-    const { id } = msg.chat;
+  const { id } = msg.chat;
+  const response = getResponse("product");
 
-    // If user sends text for the list (not a number and not a command) => Add data to the DB and send response message
-    if (
-      !isNaN(msg.text) ||
-      ["/clear", "/view", "/start", "/help", "/expenses"].includes(msg.text) ||
-      new RegExp("^/templates").test(msg.text)
-    )
-      return;
+  if (
+    msg.entities ||
+    !isNaN(msg.text) ||
+    new RegExp("^/templates").test(msg.text)
+  )
+    return;
 
-    await recieveData(msg.from.id);
+  await recieveData(msg.from.id);
 
-    list.push(msg.text);
-    listController.updateData({ ld: list, from: msg.from.id });
+  list.push(msg.text);
+  listController.updateData({ ld: list, from: msg.from.id });
 
-    const response = `☑`;
-
-    bot.sendMessage(id, response, options);
-  } catch (err) {
-    console.error(err);
-  }
+  bot.sendMessage(id, response, options);
 });
-
-// Sending an empty HTTP response on request
-require("http")
-  .createServer()
-  .listen(process.env.PORT || 5000)
-  .on("request", function (req, res) {
-    res.end("");
-  });
